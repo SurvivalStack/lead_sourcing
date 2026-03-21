@@ -38,6 +38,6 @@ By automating the discovery phase of the search process, this engine reduces man
 
 
                                                
-                                               ⚠️ Disclaimer & Ethics ⚠️
+##                                                  ⚠️ Disclaimer & Ethics ⚠️
 
 This tool is intended for personal career research and educational purposes. Because it relies on web scraping via python-jobspy, its functionality is subject to change based on updates to the host platforms' site structures. Users should adhere to the Terms of Service of the respective job boards and implement responsible scraping practices (e.g., using the built-in jitter and limiting request frequency).
