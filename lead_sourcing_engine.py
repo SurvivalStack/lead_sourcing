@@ -1,31 +1,43 @@
-import random
 import time
+import random
+import yaml
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
 from jobspy import scrape_jobs
 
+def load_config():
+    """Loads configuration from the external YAML file."""
+    try:
+        with open("config.yaml", "r") as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        print("CRITICAL ERROR: config.yaml not found. Please create it.")
+        exit(1)
+        
+config = load_config()
 # ==========================================
-# CONFIGURATION - EDIT THESE SETTINGS
+# CONFIGURATION - config.yaml
 # ==========================================
-SEARCH_TERM = query = '("Customer Support" OR "Technical Support") AND (Manager OR "Senior Manager" OR Director OR "Head of" OR VP) AND ("SaaS" OR "Cloud" OR "Software")'
-LOCATION = "USA"
-SITES = ["linkedin", "indeed", "google"]
-RESULTS_WANTED = 20
-IS_REMOTE = True
+SEARCH_TERM = config['search']['term']
+LOCATION = config['search']['location']
+SITES = config['search']['sites']
+RESULTS_WANTED = config['search']['results_wanted']
+IS_REMOTE = config['search']['is_remote']
 
 # Retention Policy
-MAX_FILES = 14  # Floor: Minimum number of files to keep
-MAX_DAYS = 30   # Window: Number of days to keep files
+MAX_FILES = config['retention']['max_files']
+MAX_DAYS = config['retention']['max_days']
 
 # List of companies/aggregators to exclude from results
-CLUTTER_LIST = ["Swooped", "Lensa", "Talentify", "Jobright", "MyJobHelper", "Jooble"]
+CLUTTER_LIST = config['clutter_list']
 # ==========================================
 
 def rotate_leads(max_files, max_days):
     """Prunes old lead files based on count and age constraints."""
     path = Path(".")
-    files = sorted(list(path.glob("jobleads_*.csv")), key=lambda x: x.name, reverse=True)
+    # FIXED: Look for "leads_" instead of "jobleads_"
+    files = sorted(list(path.glob("leads_*.csv")), key=lambda x: x.name, reverse=True)
     
     if not files:
         return
@@ -33,8 +45,11 @@ def rotate_leads(max_files, max_days):
     current_time = datetime.now()
     for index, file_path in enumerate(files):
         try:
-            parts = file_path.stem.split('_')
-            file_date = datetime.strptime(f"{parts}_{parts}", "%Y%m%d_%H%M")
+            # Filename format: leads_YYYYMMDD_HHMM.csv
+            parts = file_path.stem.split('_') 
+            
+            # FIXED: Index the list to get the actual date and time strings
+            file_date = datetime.strptime(f"{parts[ 1 ]}_{parts[ 2 ]}", "%Y%m%d_%H%M")
             age = (current_time - file_date).days
             
             # Keep if within the 'X' newest files OR within the day window
@@ -43,7 +58,8 @@ def rotate_leads(max_files, max_days):
             
             file_path.unlink()
             print(f"  - Pruned stale file: {file_path.name}")
-        except Exception:
+        except Exception as e:
+            # We skip errors here to ensure one bad filename doesn't kill the whole script
             continue
 
 def run_sourcing_engine():
