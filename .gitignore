@@ -15,4 +15,4 @@ config.yaml
 leads_*.csv
 
 # Local Sandbox
-scratchpad.py
+research/
