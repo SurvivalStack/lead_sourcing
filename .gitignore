@@ -1,18 +1,17 @@
-# Python environment
+# --- Scraping & Data ---
+leads_*.csv
+*.log
+
+# --- Python Environment ---
 .venv/
 __pycache__/
-*.pyc
-.vscode/
+*.py[cod]
+*$py.class
 
-# OS files
-.DS_Store
-Thumbs.db
-
-# Config Files
+# --- Local Configuration (Sensitive) ---
 config.yaml
 
-# Personal Data (The lead files)
-leads_*.csv
-
-# Local Sandbox
-research/
+# --- System/Editor Files ---
+.DS_Store
+Thumbs.db
+.vscode/
