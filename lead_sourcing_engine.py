@@ -91,18 +91,32 @@ def run_sourcing_engine():
             print(f"  - Error querying {site}: {e}")
 
     if all_leads:
-        final_df = pd.concat(all_leads)
+        # 1. Sanitize sources to prevent the "FutureWarning"
+        # We drop all-NA columns from each source before merging to avoid dtype confusion
+        valid_leads = [df.dropna(axis=1, how='all') for df in all_leads if isinstance(df, pd.DataFrame) and not df.empty]
         
-        # Clean and Filter
-        final_df = final_df[~final_df["company"].isin(CLUTTER_LIST)]
-        final_df = final_df.drop_duplicates(subset=["job_url"])
-        
-        # Output: jobleads_YYYYMMDD_HHMM.csv
-        filename = datetime.now().strftime("leads_%Y%m%d_%H%M.csv")
-        final_df.to_csv(filename, index=False)
-        print(f"SUCCESS: {len(final_df)} unique leads saved to {filename}")
-        
-        rotate_leads(MAX_FILES, MAX_DAYS)
+        # 2. Final check to ensure we have data left after cleaning
+        valid_leads = [df for df in valid_leads if not df.empty]
+
+        if valid_leads:
+            # This is the line where the warning previously occurred
+            final_df = pd.concat(valid_leads, ignore_index=True)
+            
+            # Clean and Filter
+            if "company" in final_df.columns:
+                final_df = final_df[~final_df["company"].isin(CLUTTER_LIST)]
+            
+            if "job_url" in final_df.columns:
+                final_df = final_df.drop_duplicates(subset=["job_url"])
+            
+            # Output generation
+            filename = datetime.now().strftime("leads_%Y%m%d_%H%M.csv")
+            final_df.to_csv(filename, index=False)
+            print(f"\nSUCCESS: {len(final_df)} unique leads saved to {filename}")
+            
+            rotate_leads(MAX_FILES, MAX_DAYS)
+        else:
+            print("\nNo valid data found after cleaning empty columns.")
     else:
         print("\nNo new leads found in this session.")
 
