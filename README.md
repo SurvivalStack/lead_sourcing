@@ -37,6 +37,10 @@ The engine is decoupled from the search logic. To run your own search, update th
 3. Install dependencies: `pip install -r requirements.txt`
 4. Run the engine: `python lead_sourcing_engine.py`
 
+## Technical Documentation
+- [Contribution & Commit Standards](./docs/CONTRIBUTING.md)
+- [Infrastructure & Webhook Configuration](./docs/INFRASTRUCTURE.md)
+
 ## Business Impact
 By automating the discovery phase of the search process, this engine reduces manual overhead by an estimated **80%**. This efficiency allows for a pivot away from data collection and toward high-value activities like application tailoring and strategic networking.
                                                
