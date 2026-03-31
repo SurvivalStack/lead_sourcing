@@ -1,0 +1,23 @@
+name: Topo Telemetry
+
+on:
+  # This IS supported, but linters often flag it because it's 'newer'
+  project_v2_item:
+    types: [created, edited, moved, deleted]
+
+# This is the "Radio" that lets the Repo see the Org-level Project
+permissions:
+  repository-projects: read
+
+jobs:
+  notify_discord:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Signal to Discord
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: info
+          username: "The Topo"
+          # We use a generic message because the 'item' payload is complex
+          details: "Roadmap Update: An item on SurvivalStack's Topo has been updated."
+          webhookUrl: ${{ secrets.DISCORD_PROJECT_WEBHOOK }}
