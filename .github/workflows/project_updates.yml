@@ -9,7 +9,6 @@ on:
 jobs:
   sync_and_notify:
     runs-on: ubuntu-latest
-    # Force Node 24 to clear the deprecation warning
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
     steps:
@@ -20,15 +19,21 @@ jobs:
           script: |
             const query = `query($owner:String!, $repo:String!) {
               repository(owner:$owner, name:$repo) {
-                issues(states:OPEN, first:50) {
+                issues(states:OPEN, first:10, orderBy: {field: CREATED_AT, direction: DESC}) {
                   nodes {
                     number
                     title
-                    labels(first:10) { nodes { name } }
-                    projectItems(first:5) {
+                    labels(first:5) { nodes { name } }
+                    projectItems(first:3) {
                       nodes {
-                        fieldValueByName(name: "Status") {
-                          ... on ProjectV2ItemFieldSingleSelectValue { name }
+                        project { title }
+                        fieldValues(first: 20) {
+                          nodes {
+                            ... on ProjectV2ItemFieldSingleSelectValue {
+                              field { ... on ProjectV2FieldCommon { name } }
+                              name
+                            }
+                          }
                         }
                       }
                     }
@@ -37,53 +42,60 @@ jobs:
               }
             }`;
             
-            const res = await github.graphql(query, { 
-              owner: context.repo.owner, 
-              repo: context.repo.repo 
-            });
+            const res = await github.graphql(query, { owner: context.repo.owner, repo: context.repo.repo });
 
             for (const issue of res.repository.issues.nodes) {
-              const status = issue.projectItems.nodes?.fieldValueByName?.name;
-              console.log(`Checking Issue #${issue.number}: "${issue.title}"`);
+              console.log(`--- Checking Issue #${issue.number}: "${issue.title}" ---`);
               
-              if (!status) {
-                console.log(`- No "Status" field found for this issue on the board. Skipping.`);
-                continue;
-              }
-
-              const targetLabel = `status: ${status.toLowerCase()}`;
-              const currentLabels = issue.labels.nodes.map(l => l.name);
-              console.log(`- Board Status: ${status} | Current Labels: [${currentLabels.join(', ')}]`);
-
-              if (!currentLabels.includes(targetLabel)) {
-                console.log(`- Mismatch detected. Updating label to ${targetLabel}...`);
+              for (const item of issue.projectItems.nodes) {
+                console.log(`  Board: "${item.project.title}"`);
                 
-                const labelsToRemove = currentLabels.filter(l => l.startsWith('status: '));
-                for (const l of labelsToRemove) {
-                  await github.rest.issues.removeLabel({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: issue.number,
-                    name: l
-                  }).catch(() => {});
+                // Log every field found on the card
+                const fields = item.fieldValues.nodes.filter(f => f.field);
+                if (fields.length === 0) {
+                  console.log(`    [!] No fields (like Status) are set for this card.`);
+                  continue;
                 }
 
-                await github.rest.issues.addLabels({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  labels: [targetLabel]
-                });
+                fields.forEach(f => console.log(`    Field found: "${f.field.name}" | Value: "${f.name}"`));
 
-                console.log(`- Sending Discord notification...`);
-                await fetch("${{ secrets.DISCORD_PROJECT_WEBHOOK }}", {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    content: `Project Update: **${issue.title}** is now **${status}**`
-                  })
-                });
-              } else {
-                console.log(`- Issue is already in sync. No action taken.`);
+                // Attempt to find the one that acts as our Status
+                const statusField = fields.find(f => 
+                  f.field.name.toLowerCase() === 'status' || 
+                  f.field.name.toLowerCase() === 'progress'
+                );
+
+                if (statusField) {
+                  const status = statusField.name;
+                  const targetLabel = `status: ${status.toLowerCase()}`;
+                  const currentLabels = issue.labels.nodes.map(l => l.name);
+
+                  if (!currentLabels.includes(targetLabel)) {
+                    console.log(`    ACTION: Updating label to ${targetLabel}`);
+                    // ... (rest of the labeling and discord logic remains the same)
+                    const labelsToRemove = currentLabels.filter(l => l.startsWith('status: '));
+                    for (const l of labelsToRemove) {
+                      await github.rest.issues.removeLabel({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: issue.number,
+                        name: l
+                      }).catch(() => {});
+                    }
+                    await github.rest.issues.addLabels({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.number,
+                      labels: [targetLabel]
+                    });
+                    await fetch("${{ secrets.DISCORD_PROJECT_WEBHOOK }}", {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ content: `Project Update: **${issue.title}** is now **${status}**` })
+                    });
+                  } else {
+                    console.log(`    Status is already in sync.`);
+                  }
+                }
               }
             }
