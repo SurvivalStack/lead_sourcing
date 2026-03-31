@@ -3,7 +3,7 @@ on:
   issues:
     types: [labeled]
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 jobs:
