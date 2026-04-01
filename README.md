@@ -2,8 +2,6 @@
 
 A Python framework designed to aggregate, sanitize, and manage live data from diverse job platforms. This tool automates the discovery process, eliminating the friction of navigating multiple platforms and improving data quality.
 
----
-
 ## Project Overview
 Career searching across fragmented platforms consumes excessive time and causes fatigue. This manual process often leads to duplicate postings and ghost listings from external aggregators that clutter search results and increase data harvesting risk.
 
