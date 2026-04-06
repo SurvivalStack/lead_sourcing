@@ -2,8 +2,9 @@ name: Project Updates
 on:
   issues:
     types: [labeled]
-  schedule:
-    - cron: '0 */6 * * *'
+#Disabled 4/6/26 ending pilot
+#    #  schedule:
+#    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 jobs:
